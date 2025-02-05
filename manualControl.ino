@@ -10,20 +10,20 @@
 #define SCREEN_HEIGHT 64
 
 #define ENB 23
-#define M1_RPWM 4
-#define M1_LPWM 14
-#define M2_RPWM 19
-#define M2_LPWM 18
-#define M3_RPWM 12
-#define M3_LPWM 13
-#define M4_RPWM 27
-#define M4_LPWM 5
-#define M5_RFKL 33
-#define M5_LFKL 32
-#define M6_RKPS 2
-#define M6_LKPS 15
+#define M1_RPWM 12
+#define M1_LPWM 13
+#define M2_RPWM 4
+#define M2_LPWM 14
+#define M3_RPWM 27
+#define M3_LPWM 5
+#define M4_RPWM 19
+#define M4_LPWM 18
+#define M5_RFKL 2
+#define M5_LFKL 15
+#define M6_RKPS 33
+#define M6_LKPS 32
 #define servoPin1 25
-#define servoPin2 16
+#define servoPin2 26
 
 #define M1_RPWM_CH 1
 #define M1_LPWM_CH 2
@@ -49,7 +49,7 @@ bool U=0,D=0,L=0,R=0;
 bool L1=0,L2=0,L3=0,R1=0,R2=0,R3=0;
 bool SELECT=0,START=0;
 
-char *MAC = "c8:2e:18:8d:e6:d6"; 
+char *MAC = "a8:42:e3:8d:b5:82";
 
 const unsigned char logo[] PROGMEM = {
   
@@ -124,12 +124,17 @@ uint32_t convertPWM(int value) {
 }
 
 int fast = 255; 
-int base = 150; 
-int slow = 100; 
-int side = 180;
+int slow = 90; 
+
+int base = 170; 
+int side = 150;
 int rot = 110;
+
+int rotate = 0;
 int sides = 0;
 int speeds = 0;
+
+float offsetX = 1.1;
 
 void setup() {
 
@@ -151,53 +156,51 @@ void setup() {
     servo2.attach(servoPin2, 500, 2400);
     
     motor(0, 0, 0, 0);
-    servo(95, 30);
+    servo(90, 90);
     fakt(0, 0);
     delay(500);
 }
 
 void loop() {
+    digitalWrite(ENB, HIGH);
 
-  digitalWrite(ENB, HIGH);
-  // readJoystick();
-  // calibrateMotor();
+    int motor1 = 0, motor2 = 0, motor3 = 0, motor4 = 0;
+    bool offset = (yL == 0 && xR == 0 && xL == 0);
 
-  int motor1 = 0, motor2 = 0, motor3 = 0, motor4 = 0;
-  bool netPoint = (yL==0 && xR==0 && xL==0);
+    speeds = (R2 > 0) ? slow : (L2 > 0) ? fast : base;
+    sides = (R2 > 0) ? slow : (L2 > 0) ? fast : side;
+    rotate = (R2 > 0) ? slow : (L2 > 0) ? fast : rot;
 
-    if (R2 > 0) {
-        speeds = slow;
-    } else if (L2 > 0) {
-        speeds = fast;
-    } else {
-        speeds = base;
+    float x = sqrt((xL * xL) + (yL * yL));
+    if (x > 127) { 
+        xL = (xL / x) * 127;
+        yL = (yL / x) * 127;
+    }
+    float y = (abs(xL) > 0 && abs(yL) > 0) ? 0.7 : 1.0;
+    xL *= y;
+    yL *= y;
+
+    if (abs(xL) > abs(yL)) {
+        yL = 0;  
+    } else if (abs(yL) > abs(xL)) {
+        xL = 0;  
     }
 
-    if (R2 > 0) {
-        sides = slow;
-    } else if (L2 > 0) {
-        sides = fast;
-    } else{
-      sides = side;
-    }
-    
-    if (!netPoint) {
-
+    if (!offset) {
         motor1 += speeds * (yL > 0 ? 1 : (yL < 0 ? -1 : 0));
         motor2 += speeds * (yL > 0 ? 1 : (yL < 0 ? -1 : 0));
         motor3 += speeds * (yL > 0 ? 1 : (yL < 0 ? -1 : 0));
         motor4 += speeds * (yL > 0 ? 1 : (yL < 0 ? -1 : 0));
 
-        motor1 += rot * (xL < 0 ? 1  : (xL > 0 ? -1 : 0));
-        motor2 += rot * (xL < 0 ? -1 : (xL > 0 ? 1  : 0));
-        motor3 += rot * (xL < 0 ? -1 : (xL > 0 ? 1  : 0));
-        motor4 += rot * (xL < 0 ? 1  : (xL > 0 ? -1 : 0));
+        motor1 += rotate * (xR > 0 ? 1  : (xR < 0 ? -1 : 0));
+        motor2 += rotate * (xR > 0 ? -1 : (xR < 0 ? 1  : 0));
+        motor3 += rotate * (xR > 0 ? -1 : (xR < 0 ? 1  : 0));
+        motor4 += rotate * (xR > 0 ? 1  : (xR < 0 ? -1 : 0));
 
-        motor1 += sides * (xR > 0 ? 1   : (xR < 0 ? -1 : 0));
-        motor2 += sides * (xR > 0 ? -1  : (xR < 0 ? 1  : 0));
-        motor3 += sides * (xR > 0 ? 1   : (xR < 0 ? -1 : 0));
-        motor4 += sides * (xR > 0 ? -1  : (xR < 0 ? 1  : 0));
-
+        motor1 += sides * (xL > 0 ? 1  : (xL < 0 ? -1 : 0));
+        motor2 += sides * (xL > 0 ? -1 : (xL < 0 ? 1  : 0));
+        motor3 += sides * (xL > 0 ? 1  : (xL < 0 ? -1 : 0));
+        motor4 += sides * (xL > 0 ? -1 : (xL < 0 ? 1  : 0));
     } else {
         motor1 = 0;
         motor2 = 0;
@@ -206,21 +209,22 @@ void loop() {
     }
 
     if (R1 > 0) {
-        fakt(150, 0);
+        fakt(120, 0);
     } else if (L1 > 0) {
-        fakt(-150, 0);
-    } else if (X > 0){
+        fakt(-120, 0);
+    } else if (X > 0) {
         fakt(0, 255);
-    } else{
+    } else { 
         fakt(0, 0);
     }
 
-    if (S > 0){
-      servo(30, 90);
-    } else{
-      servo(95, 30);
+    if (S > 0) {
+        servo(107, 75);
+    } else if (START > 0) {
+        servo(120, 60);
+    } else {
+        servo(96, 85);
     }
 
     motor(motor1, motor2, motor3, motor4);
-
 }

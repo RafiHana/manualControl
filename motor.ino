@@ -1,4 +1,7 @@
 void motor(int M1, int M2, int M3, int M4) {
+  float offsetY = 1.0 + (abs(M3) / 255.0) * (offsetY - 1.0);
+  M3 = M3 * offsetY; 
+  
   if(M1 > 0) {
     ledcWrite(M1_RPWM, convertPWM(M1));
     ledcWrite(M1_LPWM, 0);
